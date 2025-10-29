@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.InputSystem; // Giữ nguyên
 using DG.Tweening;
 
 [RequireComponent(typeof(JellyPiece))]
@@ -20,13 +20,15 @@ public class PieceDragger : MonoBehaviour
     #endregion
 
     #region Input & Layers
-    private Mouse mouse;
+    // (*** SỬA ĐỔI ***)
+    private Pointer pointer; // Thay "Mouse mouse" bằng "Pointer pointer"
+    // (*** HẾT SỬA ĐỔI ***)
+
     private int jellyLayerMask;
-    private int spotLayerMask; // Rất quan trọng cho logic hover
+    private int spotLayerMask;
     #endregion
 
     #region Hover Logic
-    // Biến này theo dõi Spot mà chúng ta đang trỏ chuột vào
     private JellySpot currentHoveredSpot = null;
     #endregion
 
@@ -38,10 +40,13 @@ public class PieceDragger : MonoBehaviour
     {
         jellyPiece = GetComponent<JellyPiece>();
         mainCamera = Camera.main;
-        mouse = Mouse.current;
-        
+
+        // (*** SỬA ĐỔI ***)
+        pointer = Pointer.current; // Thay "Mouse.current" bằng "Pointer.current"
+        // (*** HẾT SỬA ĐỔI ***)
+
         jellyLayerMask = LayerMask.GetMask("Jelly"); 
-        spotLayerMask = LayerMask.GetMask("JellySpot"); // Cần layer của Spot
+        spotLayerMask = LayerMask.GetMask("JellySpot");
     }
 
     void Start()
@@ -53,9 +58,6 @@ public class PieceDragger : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Được gọi bởi JellySpawner để lưu vị trí ban đầu
-    /// </summary>
     public void SetSpawner(JellySpawner spawner)
     {
         mySpawner = spawner;
@@ -71,101 +73,95 @@ public class PieceDragger : MonoBehaviour
     {
         // Các kiểm tra an toàn
         if (isPlaced || boardManager == null) return;
-        if (mouse == null) { mouse = Mouse.current; if (mouse == null) return; }
+        
+        // (*** SỬA ĐỔI: Kiểm tra Pointer ***)
+        if (pointer == null) 
+        { 
+            pointer = Pointer.current; 
+            if (pointer == null) return; 
+        }
 
-        Ray mouseRay = mainCamera.ScreenPointToRay(GetMousePos());
+        Ray mouseRay = mainCamera.ScreenPointToRay(GetPointerPos()); // Đổi tên hàm
 
-        // 1. Nhấn chuột xuống
-        if (mouse.leftButton.wasPressedThisFrame)
+        // 1. Nhấn chuột / chạm màn hình
+        // (*** SỬA ĐỔI: Dùng .press thay vì .leftButton ***)
+        if (pointer.press.wasPressedThisFrame)
+        // (*** HẾT SỬA ĐỔI ***)
         {
             if (Physics.Raycast(mouseRay, out RaycastHit hit, Mathf.Infinity, jellyLayerMask))
             {
-                // Phải nhấn trúng piece này
                 if (hit.collider.GetComponentInParent<PieceDragger>() == this)
                 {
                     isDragging = true;
                     Vector3 mouseWorldPos = GetMouseWorldPositionFromRay(mouseRay);
                     offset = transform.position - mouseWorldPos;
                     
-                    // Ẩn TẤT CẢ các border khác khi bắt đầu kéo
                     boardManager.HideAllBorders();
                 }
             }
         }
 
-        // 2. Đang kéo chuột
-        if (isDragging && mouse.leftButton.isPressed)
+        // 2. Đang kéo / đang lướt tay
+        // (*** SỬA ĐỔI: Dùng .press thay vì .leftButton ***)
+        if (isDragging && pointer.press.isPressed)
+        // (*** HẾT SỬA ĐỔI ***)
         {
             Vector3 mouseWorldPos = GetMouseWorldPositionFromRay(mouseRay);
             transform.position = mouseWorldPos + offset;
             
-            // Xử lý logic HOVER (hiện viền 1x1)
             HandleSpotHighlighting_Hover(mouseRay);
         }
 
-        // 3. Thả chuột
-        if (isDragging && mouse.leftButton.wasReleasedThisFrame)
+        // 3. Thả chuột / nhấc tay
+        // (*** SỬA ĐỔI: Dùng .press thay vì .leftButton ***)
+        if (isDragging && pointer.press.wasReleasedThisFrame)
+        // (*** HẾT SỬA ĐỔI ***)
         {
             isDragging = false;
             
-            // Xử lý logic ĐẶT
             TryPlaceOnBoard();
         }
     }
 
-    /// <summary>
-    /// Xử lý việc bật/tắt viền khi rê chuột
-    /// </summary>
     private void HandleSpotHighlighting_Hover(Ray mouseRay)
     {
         JellySpot spotUnderMouse = null;
         
-        // Raycast để tìm JellySpot
         if (Physics.Raycast(mouseRay, out RaycastHit hit, Mathf.Infinity, spotLayerMask))
         {
             spotUnderMouse = hit.collider.GetComponent<JellySpot>();
         }
 
-        // Nếu spot mới khác spot cũ (chuột di chuyển)
         if (spotUnderMouse != currentHoveredSpot)
         {
-            // 1. TẮT spot cũ (nếu có)
             if (currentHoveredSpot != null)
             {
                 currentHoveredSpot.HideBorder();
             }
-
-            // 2. BẬT spot mới (nếu hợp lệ)
+            
             if (spotUnderMouse != null && !spotUnderMouse.isOccupied)
             {
                 spotUnderMouse.ShowBorder();
-                currentHoveredSpot = spotUnderMouse; // Lưu lại spot mới
+                currentHoveredSpot = spotUnderMouse;
             }
             else
             {
-                // Chuột đang ở trên 1 spot không hợp lệ, hoặc ngoài board
                 currentHoveredSpot = null;
             }
         }
     }
 
-    /// <summary>
-    /// Thử đặt piece lên bàn cờ
-    /// </summary>
     private void TryPlaceOnBoard()
     {
-        // Kiểm tra xem lúc thả chuột, ta có đang ở trên 1 spot hợp lệ không
         if (currentHoveredSpot != null && !currentHoveredSpot.isOccupied)
         {
-            // Tắt viền của spot đó
             JellySpot targetSpot = currentHoveredSpot;
             targetSpot.HideBorder();
             
-            // Gọi hàm đặt của BoardManager
             if (boardManager.TryPlacePiece(jellyPiece, targetSpot))
             {
                 isPlaced = true;
-                this.enabled = false; // Vô hiệu hóa script này để không kéo được nữa
+                this.enabled = false;
                 
                 if (mySpawner != null)
                 {
@@ -174,23 +170,17 @@ public class PieceDragger : MonoBehaviour
             }
             else
             {
-                // BoardManager từ chối (ví dụ: đang check match)
                 ReturnToStart();
             }
         }
         else
         {
-             // Thả ở nơi không hợp lệ
              ReturnToStart();
         }
         
-        // Dọn dẹp
         currentHoveredSpot = null;
     }
-
-    /// <summary>
-    /// Trả piece về vị trí ban đầu
-    /// </summary>
+    
     private void ReturnToStart()
     {
         transform.DOMove(startPosition, 0.3f).SetEase(Ease.OutCubic);
@@ -201,10 +191,12 @@ public class PieceDragger : MonoBehaviour
     #region Input Helpers
     //-------------------------------------------------
 
-    private Vector3 GetMousePos()
+    // (*** SỬA ĐỔI: Đổi tên và logic hàm ***)
+    private Vector3 GetPointerPos()
     {
-        return mouse.position.ReadValue();
+        return pointer.position.ReadValue(); // Thay "mouse.position"
     }
+    // (*** HẾT SỬA ĐỔI ***)
 
     private Vector3 GetMouseWorldPositionFromRay(Ray ray)
     {
@@ -214,9 +206,9 @@ public class PieceDragger : MonoBehaviour
             return ray.GetPoint(distance);
         }
         // Fallback
-        Vector3 mousePos = GetMousePos();
-        Vector3 screenMousePos = new Vector3(mousePos.x, mousePos.y, mainCamera.WorldToScreenPoint(transform.position).z);
-        return mainCamera.ScreenToWorldPoint(screenMousePos);
+        Vector3 pointerPos = GetPointerPos(); // Sửa tên biến
+        Vector3 screenPointerPos = new Vector3(pointerPos.x, pointerPos.y, mainCamera.WorldToScreenPoint(transform.position).z);
+        return mainCamera.ScreenToWorldPoint(screenPointerPos);
     }
 
     public void SetIsPlaced(bool placed)
