@@ -2,13 +2,8 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
-/// <summary>
-/// Quản lý trạng thái chung của trò chơi (Playing, Win, GameOver)
-/// và theo dõi mục tiêu của màn chơi.
-/// </summary>
 public class GameManager : MonoBehaviour
 {
-    // --- STATE ---
     public enum GameState
     {
         Playing,
@@ -17,32 +12,25 @@ public class GameManager : MonoBehaviour
     }
 
     [Header("Level Configuration")]
-    [Tooltip("Số thứ tự của màn chơi này (ví dụ: 1, 2, 3...)")]
     public int levelNumber = 1;
 
-    [Tooltip("Trạng thái hiện tại của game (Chỉ để theo dõi)")]
     [SerializeField] 
-    private GameState _currentState; // Dùng _ (gạch dưới) cho private
+    private GameState _currentState;
 
     public GameState CurrentState 
     { 
         get { return _currentState; }
-        private set { _currentState = value; } // Setter vẫn là private
+        private set { _currentState = value; }
     }
 
 
-    // --- SINGLETON ---
     public static GameManager Instance { get; private set; }
 
-    // --- REFERENCES ---
     [Header("References")]
-    [Tooltip("Gán BoardManager vào đây")]
     [SerializeField] private BoardManager boardManager;
-    // (*** MỚI: Tự động tìm UIManager ***)
     private UIManager uiManager;
 
 
-    // --- LEVEL REQUIREMENTS ---
     [System.Serializable]
     public class ColorRequirement
     {
@@ -51,16 +39,13 @@ public class GameManager : MonoBehaviour
     }
 
     [Header("Level Requirements")]
-    [Tooltip("Danh sách các mục tiêu cần thu thập của màn chơi này")]
     public List<ColorRequirement> levelRequirements;
     
-    // Dictionary nội bộ để theo dõi tiến trình
     private Dictionary<JellyColor, int> _currentRequirements;
 
     #region Initialization
     void Awake()
     {
-        // Setup Singleton
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -80,12 +65,10 @@ public class GameManager : MonoBehaviour
             boardManager = FindObjectOfType<BoardManager>();
         }
 
-        // (*** MỚI: Tự động tìm UIManager ***)
-        uiManager = UIManager.Instance; // Ưu tiên Singleton
+        uiManager = UIManager.Instance;
 
         InitializeRequirements();
 
-        // (*** MỚI: Khởi tạo UI ***)
         if (uiManager != null)
         {
             uiManager.SetupInitialUI(levelNumber);
@@ -93,7 +76,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("Không tìm thấy UIManager, Goal Panel sẽ không hoạt động.");
+            Debug.LogWarning("UIManager not found, Goal Panel will not work.");
         }
     }
     
@@ -125,7 +108,6 @@ public class GameManager : MonoBehaviour
             
             if (_currentRequirements.ContainsKey(color))
             {
-                // (SỬA ĐỔI) Chỉ trừ nếu lớn hơn 0
                 if (_currentRequirements[color] > 0)
                 {
                     _currentRequirements[color] -= amount;
@@ -140,7 +122,6 @@ public class GameManager : MonoBehaviour
 
         if (requirementChanged)
         {
-            // (*** MỚI: Cập nhật UI ***)
             if (uiManager != null)
             {
                 uiManager.UpdateGoalUI(_currentRequirements);

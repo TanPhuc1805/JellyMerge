@@ -10,10 +10,8 @@ public class BoardManagerEditor : Editor
     private SerializedProperty sp_gridHeight;
     private SerializedProperty sp_levelLayout;
 
-    // Lưu lại ô piece đang được chọn để sửa màu
     private Vector2Int selectedPieceCoord = new Vector2Int(-1, -1);
 
-    // (Copy từ JellyPieceEditor.cs để dùng cho việc hiển thị)
     private static readonly Dictionary<JellyColor, Color> ColorPalette = new Dictionary<JellyColor, Color>
     {
         { JellyColor.None, new Color(0.15f, 0.15f, 0.15f) },
@@ -35,46 +33,32 @@ public class BoardManagerEditor : Editor
         sp_levelLayout = serializedObject.FindProperty("levelLayout");
     }
 
-    /// <summary>
-    /// (HÀM ĐÃ ĐƯỢC VIẾT LẠI)
-    /// </summary>
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
 
-        // --- PHẦN 1: VẼ CÁC TRƯỜNG CẤU HÌNH ---
-        
-        // Vẽ 2 trường Width và Height
         EditorGUILayout.LabelField("Configuration", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(sp_gridWidth);
         EditorGUILayout.PropertyField(sp_gridHeight);
         EditorGUILayout.Space();
 
-        // (THAY ĐỔI QUAN TRỌNG)
-        // Vẽ TẤT CẢ các trường public khác (cellSize, prefabs, timeBetweenCombos)
-        // NGOẠI TRỪ các trường ta sẽ vẽ thủ công bên dưới.
         DrawPropertiesExcluding(serializedObject, "m_Script", "gridWidth", "gridHeight", "levelLayout");
 
-        
-        // --- PHẦN 2: VẼ MAP EDITOR TÙY CHỈNH ---
         EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
         EditorGUILayout.LabelField("Level Layout Editor", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
-            "Click chuột vào lưới bên dưới để thiết kế map:\n" +
-            "• Chuột Trái: Bật / Tắt ô (Tạo hình dạng map)\n" +
-            "• Chuột Phải: Thêm / Xóa Piece đặt sẵn (chữ P)\n\n" +
-            "Click vào ô 'P' để chọn và sửa màu cho piece đó ở bên dưới.",
+            "Click the grid below to design the map:\n" +
+            "• Left Click: Toggle cell on/off (Shape the map)\n" +
+            "• Right Click: Add / Remove initial piece (P)\n\n" +
+            "Click a 'P' cell to select it and edit its colors below.",
             MessageType.Info);
         EditorGUILayout.Space(5);
 
-        // Kiểm tra nếu size thay đổi thì tự động cập nhật list
         bool sizeChanged = CheckAndResizeLayout();
 
-        // Vẽ lưới layout
         DrawLayoutGrid();
 
-        // Vẽ bảng editor 2x2 cho piece đang được chọn
         DrawSelectedPieceEditor();
 
         if (GUI.changed || sizeChanged)
@@ -84,17 +68,6 @@ public class BoardManagerEditor : Editor
         serializedObject.ApplyModifiedProperties();
     }
 
-    /// <summary>
-    /// (HÀM NÀY ĐÃ BỊ XÓA)
-    /// Chúng ta không cần hàm 'DrawDefaultInspectorWithoutScript()' nữa
-    /// vì đã dùng 'DrawPropertiesExcluding()'
-    /// </summary>
-    // private void DrawDefaultInspectorWithoutScript() { ... }
-
-
-    /// <summary>
-    /// Tự động điều chỉnh List 'levelLayout' khi 'gridWidth' hoặc 'gridHeight' thay đổi
-    /// </summary>
     private bool CheckAndResizeLayout()
     {
         int width = sp_gridWidth.intValue;
@@ -105,7 +78,6 @@ public class BoardManagerEditor : Editor
 
         if (sp_levelLayout.arraySize != expectedCount)
         {
-            // Dùng Dictionary để lưu data cũ
             Dictionary<Vector2Int, BoardManager.BoardCellData> oldData = new Dictionary<Vector2Int, BoardManager.BoardCellData>();
             foreach (var cell in boardManager.levelLayout)
             {
@@ -113,9 +85,8 @@ public class BoardManagerEditor : Editor
                     oldData[cell.position] = cell;
             }
             
-            boardManager.levelLayout.Clear(); // Xóa list cũ
+            boardManager.levelLayout.Clear();
 
-            // Tạo list mới, điền data cũ vào nếu có
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
@@ -124,21 +95,17 @@ public class BoardManagerEditor : Editor
                     BoardManager.BoardCellData cell;
                     if (!oldData.TryGetValue(currentPos, out cell))
                     {
-                        // Đây là ô mới, dùng giá trị mặc định
                         cell = new BoardManager.BoardCellData { position = currentPos, isEnabled = true, hasInitialPiece = false };
                     }
                     boardManager.levelLayout.Add(cell);
                 }
             }
-            serializedObject.Update(); // Báo cho SerializedObject biết là target đã thay đổi
+            serializedObject.Update();
             return true;
         }
         return false;
     }
 
-    /// <summary>
-    /// Vẽ lưới layout 2D trong Inspector
-    /// </summary>
     private void DrawLayoutGrid()
     {
         int width = sp_gridWidth.intValue;
@@ -149,21 +116,20 @@ public class BoardManagerEditor : Editor
         float spacing = 2f;
 
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-        // Lấy 1 Rect đủ lớn cho cả lưới
         Rect gridRect = GUILayoutUtility.GetRect(
             (cellSize + spacing) * width + spacing,
             (cellSize + spacing) * height + spacing
         );
 
-        GUI.Box(gridRect, ""); // Vẽ nền cho lưới
+        GUI.Box(gridRect, "");
 
         for (int y_inv = 0; y_inv < height; y_inv++)
         {
-            int y = height - 1 - y_inv; // Vẽ từ trên xuống (y=0 ở dưới)
+            int y = height - 1 - y_inv;
             for (int x = 0; x < width; x++)
             {
                 int index = y * width + x;
-                if (index >= sp_levelLayout.arraySize) continue; // An toàn
+                if (index >= sp_levelLayout.arraySize) continue;
 
                 SerializedProperty cellProp = sp_levelLayout.GetArrayElementAtIndex(index);
                 SerializedProperty sp_isEnabled = cellProp.FindPropertyRelative("isEnabled");
@@ -171,26 +137,24 @@ public class BoardManagerEditor : Editor
 
                 Rect cellRect = new Rect(
                     gridRect.x + spacing + x * (cellSize + spacing),
-                    gridRect.y + spacing + y_inv * (cellSize + spacing), // y_inv để vẽ từ trên xuống
+                    gridRect.y + spacing + y_inv * (cellSize + spacing),
                     cellSize,
                     cellSize
                 );
 
-                // Quyết định màu và chữ
                 string cellLabel = "";
                 Color cellColor;
 
                 if (!sp_isEnabled.boolValue)
                 {
-                    cellColor = new Color(0.2f, 0.2f, 0.2f); // Màu ô bị tắt
+                    cellColor = new Color(0.2f, 0.2f, 0.2f);
                     cellLabel = "X";
                 }
                 else if (sp_hasInitialPiece.boolValue)
                 {
-                    cellColor = new Color(0.2f, 0.5f, 1f); // Màu xanh cho "Piece"
+                    cellColor = new Color(0.2f, 0.5f, 1f);
                     cellLabel = "P";
                     
-                    // Highlight nếu đang được chọn
                     if(selectedPieceCoord.x == x && selectedPieceCoord.y == y)
                     {
                         cellColor = Color.cyan;
@@ -198,71 +162,65 @@ public class BoardManagerEditor : Editor
                 }
                 else
                 {
-                    cellColor = new Color(0.5f, 0.5f, 0.5f); // Màu ô trống (spot)
+                    cellColor = new Color(0.5f, 0.5f, 0.5f);
                     cellLabel = "";
                 }
 
                 GUI.backgroundColor = cellColor;
                 GUI.Box(cellRect, cellLabel, EditorStyles.miniButton);
 
-                // Xử lý click chuột
                 Event e = Event.current;
                 if (e.type == EventType.MouseDown && cellRect.Contains(e.mousePosition))
                 {
-                    if (e.button == 0) // Chuột trái -> Bật/Tắt ô
+                    if (e.button == 0)
                     {
                         sp_isEnabled.boolValue = !sp_isEnabled.boolValue;
                         if (!sp_isEnabled.boolValue)
                         {
-                            sp_hasInitialPiece.boolValue = false; // Tắt luôn piece nếu tắt ô
+                            sp_hasInitialPiece.boolValue = false;
                         }
                     }
-                    else if (e.button == 1) // Chuột phải -> Bật/Tắt piece
+                    else if (e.button == 1)
                     {
-                        if (sp_isEnabled.boolValue) // Chỉ cho phép trên ô đang bật
+                        if (sp_isEnabled.boolValue)
                         {
                             sp_hasInitialPiece.boolValue = !sp_hasInitialPiece.boolValue;
                         }
                     }
 
-                    // Nếu click vào ô piece, chọn nó
                     if (sp_hasInitialPiece.boolValue)
                     {
                         selectedPieceCoord = new Vector2Int(x, y);
                     }
                     else if (selectedPieceCoord.x == x && selectedPieceCoord.y == y)
                     {
-                        selectedPieceCoord = new Vector2Int(-1, -1); // Bỏ chọn
+                        selectedPieceCoord = new Vector2Int(-1, -1);
                     }
 
-                    e.Use(); // Đánh dấu sự kiện đã được xử lý
+                    e.Use();
                 }
             }
         }
         EditorGUILayout.EndVertical();
-        GUI.backgroundColor = Color.white; // Reset màu
+        GUI.backgroundColor = Color.white;
     }
 
-    /// <summary>
-    /// Vẽ 4 ô màu 2x2 để chỉnh piece
-    /// </summary>
     private void DrawSelectedPieceEditor()
     {
         if (selectedPieceCoord.x < 0 || selectedPieceCoord.y < 0)
         {
-            return; // Không có piece nào được chọn
+            return;
         }
 
         int index = selectedPieceCoord.y * sp_gridWidth.intValue + selectedPieceCoord.x;
         if (index >= sp_levelLayout.arraySize)
         {
-            selectedPieceCoord = new Vector2Int(-1, -1); // Lỗi, bỏ chọn
+            selectedPieceCoord = new Vector2Int(-1, -1);
             return;
         }
 
         SerializedProperty cellProp = sp_levelLayout.GetArrayElementAtIndex(index);
 
-        // Nếu ô này không còn piece nữa, bỏ chọn
         if (!cellProp.FindPropertyRelative("hasInitialPiece").boolValue)
         {
             selectedPieceCoord = new Vector2Int(-1, -1);
@@ -272,13 +230,11 @@ public class BoardManagerEditor : Editor
         EditorGUILayout.Space(10);
         EditorGUILayout.LabelField($"Editing Initial Piece at ({selectedPieceCoord.x}, {selectedPieceCoord.y})", EditorStyles.boldLabel);
 
-        // Lấy 4 thuộc tính màu
         SerializedProperty sp_tl = cellProp.FindPropertyRelative("initial_TL");
         SerializedProperty sp_tr = cellProp.FindPropertyRelative("initial_TR");
         SerializedProperty sp_bl = cellProp.FindPropertyRelative("initial_BL");
         SerializedProperty sp_br = cellProp.FindPropertyRelative("initial_BR");
 
-        // Vẽ 4 ô (copy từ JellyPieceEditor)
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
         float cellSize = 50f;
         float spacing = 4f;
@@ -298,9 +254,6 @@ public class BoardManagerEditor : Editor
         EditorGUILayout.EndVertical();
     }
 
-    /// <summary>
-    /// Helper: Vẽ 1 ô màu có thể click để đổi màu
-    /// </summary>
     private void DrawEditorCell(SerializedProperty colorProperty, float x, float y, string label)
     {
         JellyColor cellColor = (JellyColor)colorProperty.enumValueIndex;
@@ -309,7 +262,6 @@ public class BoardManagerEditor : Editor
         Color color = ColorPalette[cellColor];
         EditorGUI.DrawRect(cellRect, color);
         
-        // Vẽ chữ tên màu
         if (cellColor != JellyColor.None)
         {
             GUIStyle nameStyle = new GUIStyle(EditorStyles.miniLabel)
@@ -325,11 +277,9 @@ public class BoardManagerEditor : Editor
              GUI.Label(cellRect, "∅", EditorStyles.centeredGreyMiniLabel);
         }
         
-        // Xử lý click (chuột trái)
         Event e = Event.current;
         if (e.type == EventType.MouseDown && cellRect.Contains(e.mousePosition) && e.button == 0)
         {
-            // Cycle color
             int currentIndex = colorProperty.enumValueIndex;
             currentIndex = (currentIndex + 1) % System.Enum.GetValues(typeof(JellyColor)).Length;
             colorProperty.enumValueIndex = currentIndex;

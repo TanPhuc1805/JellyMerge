@@ -10,7 +10,6 @@ public class JellyPieceEditor : Editor
     private const float CELL_SIZE = 50f;
     private const float CELL_SPACING = 4f;
     
-    // Color palette (lấy từ JellyPiece)
     private static readonly Dictionary<JellyColor, Color> ColorPalette = new Dictionary<JellyColor, Color>
     {
         { JellyColor.None, new Color(0.15f, 0.15f, 0.15f) },
@@ -30,31 +29,22 @@ public class JellyPieceEditor : Editor
         
         serializedObject.Update();
 
-        // Header
         EditorGUILayout.Space(5);
         DrawHeader();
         EditorGUILayout.Space(10);
         
-        // Visual Grid Editor
         DrawVisualGrid(piece);
         EditorGUILayout.Space(10);
         
-        // Color Palette
         DrawColorPalette(piece);
         EditorGUILayout.Space(10);
         
-        // Hiển thị các trường mới
         EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
         EditorGUILayout.LabelField("Prefab Setup", EditorStyles.boldLabel);
 
-        // Hiển thị 2 trường còn lại
         EditorGUILayout.PropertyField(serializedObject.FindProperty("jellyCellPrefab"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("visualsParent"));
 
-        // --- THAY ĐỔI: Đã XÓA dòng 'visualCellSize' ---
-        // Biến này không còn tồn tại trên JellyPiece.cs (vì ta dùng scale/pos cố định)
-        // EditorGUILayout.PropertyField(serializedObject.FindProperty("visualCellSize"));
-        
         serializedObject.ApplyModifiedProperties();
     }
     
@@ -92,7 +82,6 @@ public class JellyPieceEditor : Editor
             GRID_COLOR
         );
         
-        // Draw cells
         DrawCell(serializedObject.FindProperty("topLeft"), startX + CELL_SPACING, startY + CELL_SPACING, "TL");
         DrawCell(serializedObject.FindProperty("topRight"), startX + CELL_SIZE + CELL_SPACING * 2, startY + CELL_SPACING, "TR");
         DrawCell(serializedObject.FindProperty("bottomLeft"), startX + CELL_SPACING, startY + CELL_SIZE + CELL_SPACING * 2, "BL");
@@ -142,7 +131,6 @@ public class JellyPieceEditor : Editor
         Event e = Event.current;
         if (e.type == EventType.MouseDown && cellRect.Contains(e.mousePosition))
         {
-            // Cycle color
             int currentIndex = colorProperty.enumValueIndex;
             currentIndex = (currentIndex + 1) % System.Enum.GetValues(typeof(JellyColor)).Length;
             colorProperty.enumValueIndex = currentIndex;
@@ -178,8 +166,6 @@ public class JellyPieceEditor : Editor
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.EndVertical();
     }
-    
-    // --- Helper methods (Giữ nguyên) ---
     
     private Color GetContrastColor(Color bgColor)
     {

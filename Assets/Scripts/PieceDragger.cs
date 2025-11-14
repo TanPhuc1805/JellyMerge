@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.InputSystem; // Giữ nguyên
+using UnityEngine.InputSystem;
 using DG.Tweening;
 
 [RequireComponent(typeof(JellyPiece))]
@@ -20,9 +20,7 @@ public class PieceDragger : MonoBehaviour
     #endregion
 
     #region Input & Layers
-    // (*** SỬA ĐỔI ***)
-    private Pointer pointer; // Thay "Mouse mouse" bằng "Pointer pointer"
-    // (*** HẾT SỬA ĐỔI ***)
+    private Pointer pointer;
 
     private int jellyLayerMask;
     private int spotLayerMask;
@@ -41,9 +39,7 @@ public class PieceDragger : MonoBehaviour
         jellyPiece = GetComponent<JellyPiece>();
         mainCamera = Camera.main;
 
-        // (*** SỬA ĐỔI ***)
-        pointer = Pointer.current; // Thay "Mouse.current" bằng "Pointer.current"
-        // (*** HẾT SỬA ĐỔI ***)
+        pointer = Pointer.current;
 
         jellyLayerMask = LayerMask.GetMask("Jelly"); 
         spotLayerMask = LayerMask.GetMask("JellySpot");
@@ -54,7 +50,7 @@ public class PieceDragger : MonoBehaviour
         boardManager = FindObjectOfType<BoardManager>();
         if (boardManager == null)
         {
-            Debug.LogError("Không tìm thấy BoardManager trong Scene!", this);
+            Debug.LogError("BoardManager not found in Scene!", this);
         }
     }
 
@@ -71,22 +67,17 @@ public class PieceDragger : MonoBehaviour
     
     void Update()
     {
-        // Các kiểm tra an toàn
         if (isPlaced || boardManager == null) return;
         
-        // (*** SỬA ĐỔI: Kiểm tra Pointer ***)
         if (pointer == null) 
         { 
             pointer = Pointer.current; 
             if (pointer == null) return; 
         }
 
-        Ray mouseRay = mainCamera.ScreenPointToRay(GetPointerPos()); // Đổi tên hàm
+        Ray mouseRay = mainCamera.ScreenPointToRay(GetPointerPos());
 
-        // 1. Nhấn chuột / chạm màn hình
-        // (*** SỬA ĐỔI: Dùng .press thay vì .leftButton ***)
         if (pointer.press.wasPressedThisFrame)
-        // (*** HẾT SỬA ĐỔI ***)
         {
             if (Physics.Raycast(mouseRay, out RaycastHit hit, Mathf.Infinity, jellyLayerMask))
             {
@@ -101,10 +92,7 @@ public class PieceDragger : MonoBehaviour
             }
         }
 
-        // 2. Đang kéo / đang lướt tay
-        // (*** SỬA ĐỔI: Dùng .press thay vì .leftButton ***)
         if (isDragging && pointer.press.isPressed)
-        // (*** HẾT SỬA ĐỔI ***)
         {
             Vector3 mouseWorldPos = GetMouseWorldPositionFromRay(mouseRay);
             transform.position = mouseWorldPos + offset;
@@ -112,10 +100,7 @@ public class PieceDragger : MonoBehaviour
             HandleSpotHighlighting_Hover(mouseRay);
         }
 
-        // 3. Thả chuột / nhấc tay
-        // (*** SỬA ĐỔI: Dùng .press thay vì .leftButton ***)
         if (isDragging && pointer.press.wasReleasedThisFrame)
-        // (*** HẾT SỬA ĐỔI ***)
         {
             isDragging = false;
             
@@ -191,12 +176,10 @@ public class PieceDragger : MonoBehaviour
     #region Input Helpers
     //-------------------------------------------------
 
-    // (*** SỬA ĐỔI: Đổi tên và logic hàm ***)
     private Vector3 GetPointerPos()
     {
-        return pointer.position.ReadValue(); // Thay "mouse.position"
+        return pointer.position.ReadValue();
     }
-    // (*** HẾT SỬA ĐỔI ***)
 
     private Vector3 GetMouseWorldPositionFromRay(Ray ray)
     {
@@ -205,8 +188,8 @@ public class PieceDragger : MonoBehaviour
         {
             return ray.GetPoint(distance);
         }
-        // Fallback
-        Vector3 pointerPos = GetPointerPos(); // Sửa tên biến
+        
+        Vector3 pointerPos = GetPointerPos();
         Vector3 screenPointerPos = new Vector3(pointerPos.x, pointerPos.y, mainCamera.WorldToScreenPoint(transform.position).z);
         return mainCamera.ScreenToWorldPoint(screenPointerPos);
     }

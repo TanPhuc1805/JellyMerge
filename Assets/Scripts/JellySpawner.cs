@@ -1,35 +1,31 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq; // Cần cho .GetValues và .ToList
+using System.Linq;
 
 public class JellySpawner : MonoBehaviour
 {
     #region Configuration
     [SerializeField] private GameObject jellyPiecePrefab;
 
-    [Header("Tỉ Lệ Spawn Các Loại Khối")]
-    [Tooltip("Trọng số (weight) cho 8 loại khối. Càng cao càng dễ ra.\n" +
-             "Thứ tự: 0(2x2), 1(Bốn 1x1), 2(Ngang), 3(Dọc), 4(T-Trên), 5(T-Dưới), 6(T-Trái), 7(T-Phải)")]
+    [Header("Spawn Weights")]
     [SerializeField] private List<int> pieceSpawnWeights = new List<int>
     {
-        10, // Case 0
-        10, // Case 1
-        10, // Case 2
-        10, // Case 3
-        10, // Case 4
-        10, // Case 5
-        10, // Case 6
-        10  // Case 7
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
     };
 
-    [Header("Giới Hạn Màu Sắc")]
-    [Tooltip("Danh sách các màu được phép spawn. Nếu danh sách này rỗng, spawner sẽ dùng tất cả các màu trong enum (trừ 'None').")]
+    [Header("Color Limits")]
     [SerializeField] private List<JellyColor> allowedColors = new List<JellyColor>();
 
-    // Biến nội bộ
     private int totalSpawnWeight = 0;
     private List<JellyColor> validColorPalette = new List<JellyColor>();
-    private System.Random rng = new System.Random(); // Dùng cho Fisher-Yates shuffle
+    private System.Random rng = new System.Random();
     #endregion
 
     //-------------------------------------------------
@@ -43,14 +39,11 @@ public class JellySpawner : MonoBehaviour
         SpawnNewPiece();
     }
 
-    /// <summary>
-    /// Kiểm tra danh sách trọng số và tính tổng
-    /// </summary>
     private void ValidateAndCalculateTotalWeight()
     {
         if (pieceSpawnWeights == null || pieceSpawnWeights.Count != 8)
         {
-            Debug.LogError("Danh sách 'Piece Spawn Weights' phải có đúng 8 phần tử! Đang reset về giá trị mặc định.", this);
+            Debug.LogError("'Piece Spawn Weights' must have exactly 8 elements! Resetting to default.", this);
             pieceSpawnWeights = Enumerable.Repeat(10, 8).ToList();
         }
 
@@ -65,35 +58,30 @@ public class JellySpawner : MonoBehaviour
 
         if (totalSpawnWeight <= 0)
         {
-            Debug.LogError("Tổng trọng số (weights) là 0! Vui lòng đặt ít nhất 1 trọng số > 0.", this);
+            Debug.LogError("Total spawn weight is 0! Please set at least one weight > 0.", this);
         }
     }
 
-    /// <summary>
-    /// Chuẩn bị danh sách màu hợp lệ (chỉ chạy 1 lần)
-    /// </summary>
     private void BuildValidColorPalette()
     {
         if (allowedColors != null && allowedColors.Count > 0)
         {
-            // Sử dụng danh sách đã cung cấp
             validColorPalette = new List<JellyColor>(allowedColors);
-            validColorPalette.Remove(JellyColor.None); // Lọc 'None' nếu user vô tình thêm vào
+            validColorPalette.Remove(JellyColor.None);
         }
         else
         {
-            // Fallback: Dùng tất cả màu từ enum (trừ 'None')
             var allColors = (JellyColor[])System.Enum.GetValues(typeof(JellyColor));
-            validColorPalette = allColors.Skip(1).ToList(); // Skip(1) để bỏ 'None'
+            validColorPalette = allColors.Skip(1).ToList();
         }
 
         if (validColorPalette.Count == 0)
         {
-            Debug.LogError("Không có màu nào (ngoại trừ 'None')! Không thể spawn piece.", this);
+            Debug.LogError("No valid colors (excluding 'None')! Cannot spawn piece.", this);
         }
         else if (validColorPalette.Count < 4)
         {
-            Debug.LogWarning("Có ít hơn 4 màu được phép. Case 1 (Bốn 1x1) có thể có màu trùng lặp.", this);
+            Debug.LogWarning("Fewer than 4 allowed colors. Case 1 (Four 1x1) may have duplicate colors.", this);
         }
     }
     #endregion
@@ -102,113 +90,96 @@ public class JellySpawner : MonoBehaviour
     #region Spawning Logic
     //-------------------------------------------------
 
-    /// <summary>
-    /// Hàm chính: Tạo và gán piece mới
-    /// </summary>
     public void SpawnNewPiece()
     {
         if (jellyPiecePrefab == null)
         {
-            Debug.LogError("Chưa gán JellyPiece Prefab cho Spawner!", this);
+            Debug.LogError("JellyPiece Prefab not assigned to Spawner!", this);
             return;
         }
 
-        // 1. Tạo grid màu
         JellyColor[,] colorGrid = GenerateRandomGrid();
         if (colorGrid == null || colorGrid.Length == 0)
         {
-            Debug.LogError("Không thể tạo grid màu. Vui lòng kiểm tra JellyColor enum và 'Allowed Colors'.", this);
+            Debug.LogError("Failed to generate color grid. Check JellyColor enum and 'Allowed Colors'.", this);
             return;
         }
 
-        // 2. Tạo GameObject
         GameObject newPieceObj = Instantiate(jellyPiecePrefab, transform.position, Quaternion.identity);
 
-        // 3. Lấy CẢ HAI component
         JellyPiece newPiece = newPieceObj.GetComponent<JellyPiece>();
         PieceDragger dragger = newPieceObj.GetComponent<PieceDragger>();
 
-        // 4. Kiểm tra và gán
         if (newPiece != null && dragger != null)
         {
-            // Gán Spawner cho Dragger (để nó biết vị trí 'startPosition' và báo cáo lại)
             dragger.SetSpawner(this);
             
-            // Khởi tạo data màu cho Piece
             newPiece.Initialize(colorGrid);
         }
         else
         {
-            Debug.LogError("Prefab 'JellyPiece' thiếu script JellyPiece.cs hoặc PieceDragger.cs!", this);
+            Debug.LogError("JellyPiece prefab is missing JellyPiece.cs or PieceDragger.cs script!", this);
             Destroy(newPieceObj);
         }
     }
 
-    /// <summary>
-    /// Tạo ra một grid 2x2 ngẫu nhiên
-    /// </summary>
     private JellyColor[,] GenerateRandomGrid()
     {
         if (validColorPalette.Count == 0)
         {
-            return new JellyColor[0, 0]; // Trả về grid rỗng nếu không có màu
+            return new JellyColor[0, 0];
         }
 
-        // 1. Xáo trộn danh sách màu (Fisher-Yates Shuffle)
-        // Tạo 1 bản copy để xáo trộn, không làm ảnh hưởng list gốc
         List<JellyColor> shuffledColors = new List<JellyColor>(validColorPalette);
         int n = shuffledColors.Count;
         while (n > 1)
         {
             n--;
-            int k = rng.Next(n + 1); // Dùng System.Random thay vì Random.Range (ổn định hơn)
+            int k = rng.Next(n + 1);
             JellyColor value = shuffledColors[k];
             shuffledColors[k] = shuffledColors[n];
             shuffledColors[n] = value;
         }
 
-        // 2. Lấy 4 màu đầu tiên (dùng modulo để an toàn nếu có ít hơn 4 màu)
         JellyColor color1 = shuffledColors[0];
         JellyColor color2 = shuffledColors[1 % shuffledColors.Count];
         JellyColor color3 = shuffledColors[2 % shuffledColors.Count];
         JellyColor color4 = shuffledColors[3 % shuffledColors.Count];
 
-        // 3. Lấy loại piece
         JellyColor[,] grid = new JellyColor[2, 2];
         int pieceType = GetRandomPieceType();
 
-        // 4. Gán màu theo loại piece
         switch (pieceType)
         {
-            case 0: // 2x2
+            case 0:
                 grid[0, 0] = color1; grid[1, 0] = color1;
                 grid[0, 1] = color1; grid[1, 1] = color1;
                 break;
-            case 1: // Bốn 1x1
+            case 1:
                 grid[0, 0] = color1; grid[1, 0] = color3;
                 grid[0, 1] = color2; grid[1, 1] = color4;
                 break;
-            case 2: // Hai 2x1 (ngang)
+            case 2:
                 grid[0, 0] = color1; grid[1, 0] = color1;
                 grid[0, 1] = color2; grid[1, 1] = color2;
                 break;
-            case 3: // Hai 1x2 (dọc)
+            case 3:
                 grid[0, 0] = color1; grid[1, 0] = color2;
                 grid[0, 1] = color1; grid[1, 1] = color2;
                 break;
-            case 4: // T-Trên
+            case 4:
                 grid[0, 0] = color2; grid[1, 0] = color3;
                 grid[0, 1] = color1; grid[1, 1] = color1;
                 break;
-            case 5: // T-Dưới
+            case 5:
                 grid[0, 0] = color1; grid[1, 0] = color1;
                 grid[0, 1] = color2; grid[1, 1] = color3;
                 break;
-            case 6: // T-Trái
+            case 6:
                 grid[0, 0] = color1; grid[1, 0] = color2;
                 grid[0, 1] = color1; grid[1, 1] = color3;
                 break;
-            case 7: // T-Phải
+            case 7:
                 grid[0, 0] = color2; grid[1, 0] = color1;
                 grid[0, 1] = color3; grid[1, 1] = color1;
                 break;
@@ -217,18 +188,15 @@ public class JellySpawner : MonoBehaviour
         return grid;
     }
 
-    /// <summary>
-    /// Chọn một loại piece ngẫu nhiên dựa trên trọng số (weights)
-    /// </summary>
     private int GetRandomPieceType()
     {
         if (totalSpawnWeight <= 0)
         {
-            Debug.LogWarning("Tổng trọng số là 0, dùng random mặc định (1/8).", this);
-            return Random.Range(0, 8); // Dùng Random của Unity
+            Debug.LogWarning("Total weight is 0, using default random (1/8).", this);
+            return Random.Range(0, 8);
         }
 
-        int randomValue = Random.Range(0, totalSpawnWeight); // Dùng Random của Unity
+        int randomValue = Random.Range(0, totalSpawnWeight);
 
         for (int i = 0; i < pieceSpawnWeights.Count; i++)
         {
@@ -243,7 +211,7 @@ public class JellySpawner : MonoBehaviour
             randomValue -= currentWeight;
         }
 
-        return Random.Range(0, 8); // Fallback
+        return Random.Range(0, 8);
     }
     #endregion
 }
